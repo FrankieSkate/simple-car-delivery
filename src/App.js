@@ -1,12 +1,10 @@
-import "./App.css";
-import Home from "./pages/Home";
+import React from "react";
+import Map from "../src/components/Map";
 
 function App() {
   return (
     <div className="App">
-      <header className="App-header">
-        <Home />
-      </header>
+      <Map />
     </div>
   );
 }
