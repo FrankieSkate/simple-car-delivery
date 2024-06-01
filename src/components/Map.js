@@ -8,6 +8,9 @@ import {
 import styled from "styled-components";
 import AddressForm from "./AddressForm";
 import { GLOBAL_COLOR } from "./constants/GlobalStyles";
+import { submitRoute, getRoute } from "../hooks/mockApi";
+import { ERROR_ON_SUBMIT, ERROR_ON_GET, ERROR_ON_FETCH } from "../utils/errors";
+import { errorMessages } from "../utils/errorMessages";
 
 const FullScreenMapContainer = styled.div`
   height: 100vh;
@@ -50,8 +53,9 @@ const Map = () => {
   const [currentPosition, setCurrentPosition] = useState(null);
   const mapRef = useRef(null);
   const [mapKey, setMapKey] = useState(0);
+  const [route, setRoute] = useState(null);
 
-  const handleFormSubmit = ({ pickup, dropoff }) => {
+  const handleFormSubmit = async ({ pickup, dropoff }) => {
     if (typeof pickup !== "string") {
       pickup = pickup.label;
     }
@@ -62,7 +66,36 @@ const Map = () => {
     setDirectionsResponse(null);
     setStart(pickup);
     setEnd(dropoff);
-    setMapKey(mapKey + 1);
+    setMapKey(prevKey => prevKey + 1);
+
+    let routeToken;
+    try {
+      routeToken = await submitRoute(pickup, dropoff);
+    } catch (error) {
+      throw new ERROR_ON_SUBMIT(errorMessages.route.submit);
+    }
+    try {
+      const returnRoute = await getRouteAndRetry(routeToken);
+      setRoute(returnRoute);
+    } catch (error) {
+      if (routeToken) {
+        throw new ERROR_ON_GET(errorMessages.route.get);
+      }
+    }
+  };
+
+  const getRouteAndRetry = async routeToken => {
+    try {
+      let returnRoute = await getRoute(routeToken);
+
+      // retry the getting route when busy
+      while (returnRoute.status === "in progress") {
+        returnRoute = await getRoute(routeToken);
+      }
+      return returnRoute;
+    } catch (error) {
+      throw new ERROR_ON_GET(errorMessages.route.get);
+    }
   };
 
   const handleLocateMe = () => {
@@ -77,11 +110,11 @@ const Map = () => {
           }
         },
         error => {
-          console.error("Error getting geolocation:", error);
+          throw new ERROR_ON_FETCH(errorMessages.geolocation.get);
         }
       );
     } else {
-      alert("Geolocation is not supported by this browser.");
+      alert(errorMessages.geolocation.notSupported);
     }
   };
 
@@ -98,7 +131,7 @@ const Map = () => {
           if (status === window.google.maps.DirectionsStatus.OK) {
             setDirectionsResponse(result);
           } else {
-            console.error(`error fetching directions ${result}`);
+            throw new ERROR_ON_FETCH(errorMessages.directions.fetch);
           }
         }
       );

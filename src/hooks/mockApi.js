@@ -1,4 +1,6 @@
 import axios from "axios";
+import { ERROR_ON_SUBMIT, ERROR_ON_GET } from "../utils/errors";
+import { errorMessages } from "../utils/errorMessages";
 
 const BASE_URL = "https://sg-mock-api.lalamove.com";
 
@@ -10,8 +12,7 @@ const submitRoute = async (origin, destination) => {
     });
     return response.data.token;
   } catch (error) {
-    console.error("Error submitting route:", error);
-    throw error;
+    throw new ERROR_ON_SUBMIT(errorMessages.route.submit);
   }
 };
 
@@ -20,8 +21,7 @@ const getRoute = async token => {
     const response = await axios.get(`${BASE_URL}/route/${token}`);
     return response.data;
   } catch (error) {
-    console.error("Error getting route:", error);
-    throw error;
+    throw new ERROR_ON_GET(errorMessages.route.get);
   }
 };
 

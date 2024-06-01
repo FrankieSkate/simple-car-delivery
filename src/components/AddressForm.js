@@ -3,6 +3,8 @@ import styled from "styled-components";
 import { TextField, Button, Grid } from "@mui/material";
 import { GLOBAL_COLOR } from "./constants/GlobalStyles";
 import { getAddress } from "../hooks/openStreetMapApi";
+import { ERROR_ON_GET } from "../utils/errors";
+import { errorMessages } from "../utils/errorMessages";
 
 const FormWrapper = styled.div`
   margin-top: 5rem;
@@ -35,7 +37,7 @@ const AddressForm = ({ onSubmit, currentPosition }) => {
           const { address } = await getAddress(lat, lng);
           setPickup(address);
         } catch (error) {
-          console.error("Error getting address:", error);
+          throw new ERROR_ON_GET(errorMessages.address.get);
         }
       }
     };

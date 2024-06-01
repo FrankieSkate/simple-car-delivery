@@ -1,4 +1,6 @@
 import axios from "axios";
+import { ERROR_ON_GET, ERROR_ON_FETCH } from "../utils/errors";
+import { errorMessages } from "../utils/errorMessages";
 
 const NOMINATIM_BASE_URL = "https://nominatim.openstreetmap.org";
 
@@ -11,23 +13,24 @@ export const getCoordinates = async address => {
       },
     });
     if (response.data.length === 0) {
-      throw new Error("Address not found");
+      throw new ERROR_ON_GET(errorMessages.address.notFound);
     }
     const { lat, lon } = response.data[0];
     return { lat: parseFloat(lat), lon: parseFloat(lon) };
   } catch (error) {
-    console.error("Error fetching coordinates:", error);
-    throw error;
+    throw new ERROR_ON_FETCH(errorMessages.address.coordinates);
   }
 };
 
 export const getAddress = async (lat, lon) => {
-  const response = await fetch(
-    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`
-  );
-  if (!response.ok) {
-    throw new Error("Failed to fetch address");
+  try {
+    const response = await fetch(
+      `${NOMINATIM_BASE_URL}/reverse?format=json&lat=${lat}&lon=${lon}`
+    );
+
+    const data = await response.json();
+    return { address: data.display_name };
+  } catch {
+    throw new ERROR_ON_GET(errorMessages.address.get);
   }
-  const data = await response.json();
-  return { address: data.display_name };
 };
