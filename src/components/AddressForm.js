@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
-import { TextField, Button, Grid, Autocomplete } from "@mui/material";
+import { TextField, Button, Grid } from "@mui/material";
 import { GLOBAL_COLOR } from "./constants/GlobalStyles";
-import { getAddress, getSuggestions } from "../hooks/openStreetMapApi";
+import { getAddress } from "../hooks/openStreetMapApi";
 
 const FormWrapper = styled.div`
   margin-top: 5rem;
@@ -26,8 +26,6 @@ const StyledButton = styled(Button)`
 const AddressForm = ({ onSubmit, currentPosition }) => {
   const [pickup, setPickup] = useState("");
   const [dropoff, setDropoff] = useState("");
-  const [pickupOptions, setPickupOptions] = useState([]);
-  const [dropoffOptions, setDropoffOptions] = useState([]);
 
   useEffect(() => {
     const updateGeolocationToAddress = async () => {
@@ -44,13 +42,6 @@ const AddressForm = ({ onSubmit, currentPosition }) => {
     updateGeolocationToAddress();
   }, [currentPosition]);
 
-  const handleSearchChange = async (value, optionsSetter) => {
-    if (value.length > 0) {
-      const results = await getSuggestions(value);
-      optionsSetter(results);
-    }
-  };
-
   return (
     <FormWrapper>
       <form
@@ -61,33 +52,19 @@ const AddressForm = ({ onSubmit, currentPosition }) => {
       >
         <Grid container direction="column" spacing={4}>
           <Grid item>
-            <Autocomplete
-              options={pickupOptions}
+            <TextField
               value={pickup}
-              onChange={(event, newValue) => {
-                setPickup(newValue);
-              }}
-              onInputChange={(event, newInputValue) => {
-                handleSearchChange(newInputValue, setPickup, setPickupOptions);
-              }}
-              renderInput={params => <TextField {...params} label="Pickup" />}
+              onChange={e => setPickup(e.target.value)}
+              label="Pickup"
+              fullWidth
             />
           </Grid>
           <Grid item>
-            <Autocomplete
-              options={dropoffOptions}
+            <TextField
               value={dropoff}
-              onChange={newValue => {
-                setDropoff(newValue);
-              }}
-              onInputChange={newInputValue => {
-                handleSearchChange(
-                  newInputValue,
-                  setDropoff,
-                  setDropoffOptions
-                );
-              }}
-              renderInput={params => <TextField {...params} label="Dropoff" />}
+              onChange={e => setDropoff(e.target.value)}
+              label="Dropoff"
+              fullWidth
             />
           </Grid>
           <Grid item container spacing={4} justifyContent="center">
@@ -103,8 +80,6 @@ const AddressForm = ({ onSubmit, currentPosition }) => {
                 onClick={() => {
                   setPickup("");
                   setDropoff("");
-                  setPickupOptions([]);
-                  setDropoffOptions([]);
                 }}
               >
                 Reset

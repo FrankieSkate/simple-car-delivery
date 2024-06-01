@@ -31,33 +31,3 @@ export const getAddress = async (lat, lon) => {
   const data = await response.json();
   return { address: data.display_name };
 };
-
-export const getSuggestions = async query => {
-  if (!query) return [];
-  // bounding for Hong Kong area, so that the predictions are more relevant
-  const boundingBox = "113.8180,22.5202,114.5024,22.1533";
-  const url = new URL("https://nominatim.openstreetmap.org/search");
-  url.search = new URLSearchParams({
-    format: "json",
-    q: query,
-    viewbox: boundingBox,
-    bounded: 1,
-  });
-
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const data = await response.json();
-    return data.map((item, index) => ({
-      label: item.display_name,
-      lat: item.lat,
-      lon: item.lon,
-      key: `${item.display_name}-${index}`,
-    }));
-  } catch (error) {
-    console.error("Failed to fetch suggestions:", error);
-    return [];
-  }
-};
