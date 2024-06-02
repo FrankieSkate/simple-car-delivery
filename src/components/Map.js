@@ -11,6 +11,7 @@ import { GLOBAL_COLOR } from "./constants/GlobalStyles";
 import { submitRoute, getRoute } from "../hooks/mockApi";
 import { ERROR_ON_SUBMIT, ERROR_ON_GET, ERROR_ON_FETCH } from "../utils/errors";
 import { errorMessages } from "../utils/errorMessages";
+import ShowDialog from "./ShowDialog";
 
 const FullScreenMapContainer = styled.div`
   height: 100vh;
@@ -75,12 +76,13 @@ const Map = () => {
       throw new ERROR_ON_SUBMIT(errorMessages.route.submit);
     }
     try {
-      const returnRoute = await getRouteAndRetry(routeToken);
-      setRoute(returnRoute);
-    } catch (error) {
       if (routeToken) {
-        throw new ERROR_ON_GET(errorMessages.route.get);
+        const returnRoute = await getRouteAndRetry(routeToken);
+        setRoute(returnRoute);
       }
+    } catch (error) {
+      setRoute(errorMessages.route.get + error.message);
+      throw new ERROR_ON_GET(errorMessages.route.get);
     }
   };
 
@@ -94,6 +96,7 @@ const Map = () => {
       }
       return returnRoute;
     } catch (error) {
+      setRoute(errorMessages.route.get + error.message);
       throw new ERROR_ON_GET(errorMessages.route.get);
     }
   };
@@ -110,6 +113,7 @@ const Map = () => {
           }
         },
         error => {
+          setRoute(errorMessages.geolocation.get + error.message);
           throw new ERROR_ON_FETCH(errorMessages.geolocation.get);
         }
       );
@@ -131,6 +135,7 @@ const Map = () => {
           if (status === window.google.maps.DirectionsStatus.OK) {
             setDirectionsResponse(result);
           } else {
+            setRoute(errorMessages.directions.fetch);
             throw new ERROR_ON_FETCH(errorMessages.directions.fetch);
           }
         }
@@ -165,6 +170,7 @@ const Map = () => {
           <LocateButton onClick={handleLocateMe}>Locate Me</LocateButton>
         </LoadScript>
       </MapContainer>
+      <ShowDialog error={route?.error} setError={setRoute} />
     </FullScreenMapContainer>
   );
 };
