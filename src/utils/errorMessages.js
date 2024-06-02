@@ -2,6 +2,7 @@ export const errorMessages = {
   route: {
     submit: "Failed to submit route",
     get: "Failed to get route",
+    failure: "Location not accessible by car",
   },
   geolocation: {
     get: "Failed to get geolocation",

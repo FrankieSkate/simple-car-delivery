@@ -9,7 +9,6 @@ import styled from "styled-components";
 import AddressForm from "./AddressForm";
 import { GLOBAL_COLOR } from "./constants/GlobalStyles";
 import { submitRoute, getRoute } from "../hooks/mockApi";
-import { ERROR_ON_FETCH } from "../utils/errors";
 import { errorMessages } from "../utils/errorMessages";
 import ShowDialog from "./ShowDialog";
 import { getAddress } from "../hooks/openStreetMapApi";
@@ -108,7 +107,7 @@ const Map = () => {
         returnRoute = await getRoute(routeToken);
       }
       if (returnRoute.status === "failure") {
-        setError(errorMessages.route.get + error.message);
+        setError(errorMessages.route.failure);
         setOpenErrorDialog(true);
       }
       return returnRoute;
