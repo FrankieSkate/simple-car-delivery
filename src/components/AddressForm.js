@@ -25,7 +25,7 @@ const StyledButton = styled(Button)`
   }
 `;
 
-const AddressForm = ({ onSubmit, currentPosition }) => {
+const AddressForm = ({ onSubmit, currentPosition, handleReset }) => {
   const [pickup, setPickup] = useState("");
   const [dropoff, setDropoff] = useState("");
 
@@ -82,6 +82,7 @@ const AddressForm = ({ onSubmit, currentPosition }) => {
                 onClick={() => {
                   setPickup("");
                   setDropoff("");
+                  handleReset();
                 }}
               >
                 Reset

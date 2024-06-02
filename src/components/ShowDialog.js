@@ -7,13 +7,13 @@ import {
   Button,
 } from "@mui/material";
 
-export const ShowDialog = ({ error, setError }) => {
+export const ShowDialog = ({ isOpen, setIsOpen, error, setError }) => {
   return (
     <>
       {/* Other component markup */}
       <Dialog
-        open={!!error}
-        onClose={() => setError(null)}
+        open={isOpen}
+        onClose={() => setIsOpen(false)}
         aria-labelledby="error-dialog-title"
         aria-describedby="error-dialog-description"
       >
@@ -24,7 +24,7 @@ export const ShowDialog = ({ error, setError }) => {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setError(null)} color="primary">
+          <Button onClick={() => setIsOpen(false)} color="primary">
             Close
           </Button>
         </DialogActions>

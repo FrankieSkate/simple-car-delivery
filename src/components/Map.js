@@ -9,9 +9,10 @@ import styled from "styled-components";
 import AddressForm from "./AddressForm";
 import { GLOBAL_COLOR } from "./constants/GlobalStyles";
 import { submitRoute, getRoute } from "../hooks/mockApi";
-import { ERROR_ON_SUBMIT, ERROR_ON_GET, ERROR_ON_FETCH } from "../utils/errors";
+import { ERROR_ON_FETCH } from "../utils/errors";
 import { errorMessages } from "../utils/errorMessages";
 import ShowDialog from "./ShowDialog";
+import { getAddress } from "../hooks/openStreetMapApi";
 
 const FullScreenMapContainer = styled.div`
   height: 100vh;
@@ -54,15 +55,25 @@ const Map = () => {
   const [currentPosition, setCurrentPosition] = useState(null);
   const mapRef = useRef(null);
   const [mapKey, setMapKey] = useState(0);
-  const [route, setRoute] = useState(null);
+  const [apiRoute, setApiRoute] = useState({});
+  const [error, setError] = useState(null);
+  const [openErrorDialog, setOpenErrorDialog] = useState(false);
+  const [wayPoints, setWayPoints] = useState([]);
+
+  const handleReset = () => {
+    setDirectionsResponse(null);
+    setStart(null);
+    setEnd(null);
+    setWayPoints([]);
+    setCurrentPosition(null);
+    setMapKey(prevKey => prevKey + 1); // Optional: force a re-render if needed
+  };
 
   const handleFormSubmit = async ({ pickup, dropoff }) => {
-    if (typeof pickup !== "string") {
-      pickup = pickup.label;
-    }
-    if (typeof dropoff !== "string") {
-      dropoff = dropoff.label;
-    }
+    handleReset();
+
+    pickup = typeof pickup === "string" ? pickup : pickup.label;
+    dropoff = typeof dropoff === "string" ? dropoff : dropoff.label;
 
     setDirectionsResponse(null);
     setStart(pickup);
@@ -73,31 +84,38 @@ const Map = () => {
     try {
       routeToken = await submitRoute(pickup, dropoff);
     } catch (error) {
-      throw new ERROR_ON_SUBMIT(errorMessages.route.submit);
+      setError(errorMessages.route.submit + error.message);
+      setOpenErrorDialog(true);
+      // throw new ERROR_ON_SUBMIT(errorMessages.route.submit);
     }
     try {
       if (routeToken) {
         const returnRoute = await getRouteAndRetry(routeToken);
-        setRoute(returnRoute);
+        setApiRoute(returnRoute);
       }
     } catch (error) {
-      setRoute(errorMessages.route.get + error.message);
-      throw new ERROR_ON_GET(errorMessages.route.get);
+      setError(errorMessages.route.get);
+      setOpenErrorDialog(true);
+      // throw new ERROR_ON_GET(errorMessages.route.get);
     }
   };
 
   const getRouteAndRetry = async routeToken => {
     try {
       let returnRoute = await getRoute(routeToken);
-
       // retry the getting route when busy
       while (returnRoute.status === "in progress") {
         returnRoute = await getRoute(routeToken);
       }
+      if (returnRoute.status === "failure") {
+        setError(errorMessages.route.get + error.message);
+        setOpenErrorDialog(true);
+      }
       return returnRoute;
     } catch (error) {
-      setRoute(errorMessages.route.get + error.message);
-      throw new ERROR_ON_GET(errorMessages.route.get);
+      setError(errorMessages.route.get);
+      setOpenErrorDialog(true);
+      // throw new ERROR_ON_GET(errorMessages.route.get);
     }
   };
 
@@ -113,8 +131,9 @@ const Map = () => {
           }
         },
         error => {
-          setRoute(errorMessages.geolocation.get + error.message);
-          throw new ERROR_ON_FETCH(errorMessages.geolocation.get);
+          setError(errorMessages.geolocation.get);
+          setOpenErrorDialog(true);
+          // throw new ERROR_ON_FETCH(errorMessages.geolocation.get);
         }
       );
     } else {
@@ -122,26 +141,59 @@ const Map = () => {
     }
   };
 
+  const handleRouteAddresses = async apiRoute => {
+    if (apiRoute && apiRoute.status === "success") {
+      try {
+        // Map all coordinate pairs to address lookups
+        const addressPromises = apiRoute.path.map(([lat, lon]) =>
+          getAddress(lat, lon)
+        );
+
+        const addresses = await Promise.all(addressPromises);
+        return addresses;
+      } catch (error) {
+        setError(errorMessages.address.get);
+        setOpenErrorDialog(true);
+      }
+    }
+  };
+
   useEffect(() => {
-    if (start && end && window.google) {
+    if (apiRoute && apiRoute.path) {
+      const fetchWayPoints = async () => {
+        const addresses = await handleRouteAddresses(apiRoute);
+        const newWayPoints = addresses.map(address => ({
+          location: address.address,
+          stopover: true,
+        }));
+        setWayPoints(newWayPoints);
+      };
+      fetchWayPoints();
+    }
+  }, [apiRoute]);
+
+  useEffect(() => {
+    setDirectionsResponse(null);
+    if (start && end && wayPoints.length > 0 && window.google) {
       const directionsService = new window.google.maps.DirectionsService();
       directionsService.route(
         {
           origin: start,
           destination: end,
+          waypoints: wayPoints,
           travelMode: window.google.maps.TravelMode.DRIVING,
         },
         (result, status) => {
           if (status === window.google.maps.DirectionsStatus.OK) {
             setDirectionsResponse(result);
           } else {
-            setRoute(errorMessages.directions.fetch);
-            throw new ERROR_ON_FETCH(errorMessages.directions.fetch);
+            setError(errorMessages.directions.fetch);
+            setOpenErrorDialog(true);
           }
         }
       );
     }
-  }, [start, end, mapKey]);
+  }, [start, end, wayPoints, mapKey]); // Depend on wayPoints to re-run when waypoints change
 
   return (
     <FullScreenMapContainer>
@@ -149,6 +201,7 @@ const Map = () => {
         <AddressForm
           onSubmit={handleFormSubmit}
           currentPosition={currentPosition}
+          handleReset={handleReset}
         />
       </FormContainer>
       <MapContainer>
@@ -170,7 +223,12 @@ const Map = () => {
           <LocateButton onClick={handleLocateMe}>Locate Me</LocateButton>
         </LoadScript>
       </MapContainer>
-      <ShowDialog error={route?.error} setError={setRoute} />
+      <ShowDialog
+        isOpen={openErrorDialog}
+        setIsOpen={setOpenErrorDialog}
+        error={error}
+        setError={setError}
+      />
     </FullScreenMapContainer>
   );
 };
